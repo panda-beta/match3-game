@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>星座连连看</title>
     <style>
         * {
@@ -11,21 +11,32 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
         body {
             font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             padding: 20px;
+            min-height: 100vh;
+            transition: background 1s ease;
+            box-sizing: border-box;
         }
 
         .game-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            padding: 30px;
+            padding: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: min(90vw, 700px);
+            max-height: 95vh;
+            overflow-y: auto;
         }
 
         .header {
@@ -36,42 +47,97 @@
         .header h1 {
             color: #333;
             margin-bottom: 10px;
-            font-size: 32px;
+            font-size: clamp(24px, 4vw, 32px);
         }
 
         .score-board {
             display: flex;
             justify-content: space-around;
-            margin-bottom: 20px;
-            gap: 15px;
+            margin-bottom: clamp(10px, 2vw, 20px);
+            gap: clamp(8px, 1.5vw, 15px);
             flex-wrap: wrap;
         }
 
         .score-item {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
+            padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 20px);
+            border-radius: 12px;
             text-align: center;
-            min-width: 100px;
+            min-width: clamp(80px, 12vw, 100px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .score-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
         }
 
         .score-item .label {
-            font-size: 14px;
+            font-size: 13px;
             opacity: 0.9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
 
         .score-item .value {
-            font-size: 28px;
+            font-size: clamp(20px, 3vw, 26px);
             font-weight: bold;
             margin-top: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 关卡进度条 */
+        .level-progress {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 20px);
+            margin-bottom: clamp(10px, 1.5vw, 15px);
+        }
+
+        .level-progress-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            background: rgba(0, 0, 0, 0.3);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffaa00);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
         .game-board {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
-            padding: 20px;
+            gap: 6px;
+            padding: 15px;
             background:
                 radial-gradient(ellipse at 20% 30%, rgba(147, 112, 219, 0.2) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 70%, rgba(173, 216, 230, 0.15) 0%, transparent 50%),
@@ -81,8 +147,9 @@
             margin-bottom: 20px;
             position: relative;
             overflow: hidden;
-            min-height: 440px;
             box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            aspect-ratio: 1 / 1;
         }
 
         /* 星星呼吸闪烁 - 高级克制 */
@@ -154,75 +221,282 @@
         }
 
         .cell {
-            width: 50px;
-            height: 50px;
+            width: 100%;
+            height: 100%;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 32px;
+            font-size: 28px;
             color: #fff;
-            transition: all 0.2s ease;
+            transition: opacity 0.15s ease-out;
             z-index: 1;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .cell:not(.empty)::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 8px;
+            pointer-events: none;
         }
 
         .cell.empty {
-            visibility: hidden;
+            pointer-events: none;
+            cursor: default;
         }
 
+        /* 按钮涟漪效果 */
+        @keyframes ripple {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* 选中状态 - 柔和 */
         .cell.selected {
-            transform: scale(1.2);
-            font-weight: bold;
+            opacity: 0.8;
+            z-index: 2;
+        }
+
+        .cell.selected::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            20% {
+                transform: translateX(-5px);
+            }
+            40% {
+                transform: translateX(5px);
+            }
+            60% {
+                transform: translateX(-5px);
+            }
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        /* 点击涟漪 */
+        .cell.ripple::before {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out forwards;
+            pointer-events: none;
         }
 
         .cell.matched {
-            animation: match 0.3s ease-out;
+            animation: matched 0.5s ease-out forwards;
         }
 
-        @keyframes match {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.5; }
-            100% { transform: scale(0); opacity: 0; }
+        @keyframes matched {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            40% {
+                opacity: 0.6;
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        /* 消除粒子 */
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes particleFly {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
+            }
+        }
+
+        /* 连接线样式 */
+        .connection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .connection-line.line {
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        /* 得分飘字 */
+        .score-float {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            pointer-events: none;
+            z-index: 20;
+            animation: scoreFloat 1s ease-out forwards;
+        }
+
+        @keyframes scoreFloat {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.5);
+            }
+        }
+
+        /* 连击提示 */
+        .combo-popup {
+            position: absolute;
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+            pointer-events: none;
+            z-index: 25;
+            animation: comboPopup 0.8s ease-out forwards;
+        }
+
+        @keyframes comboPopup {
+            0% {
+                opacity: 1;
+                transform: scale(0) rotate(-10deg);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.3) rotate(5deg);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1) translateY(-30px);
+            }
+        }
+
+        /* 连接线淡入淡出 */
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            30% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         .buttons {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: clamp(8px, 1.5vw, 12px);
+            flex-wrap: wrap;
         }
 
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 30px;
+            padding: clamp(10px, 1.5vw, 12px) clamp(20px, 3vw, 28px);
             border-radius: 25px;
-            font-size: 16px;
+            font-size: clamp(12px, 2vw, 15px);
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
         }
 
         .btn:active {
-            transform: translateY(0);
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #51cf66 0%, #69db7c 100%);
+            box-shadow: 0 4px 15px rgba(81, 207, 102, 0.4);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 6px 25px rgba(81, 207, 102, 0.6);
         }
 
         .message {
             text-align: center;
-            margin-top: 15px;
             padding: 10px;
             border-radius: 8px;
             font-weight: bold;
-            display: none;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
         }
 
         .message.show {
-            display: block;
+            opacity: 1;
         }
 
         .message.success {
@@ -255,10 +529,11 @@
 
         .level-complete-content {
             background: white;
-            padding: 40px;
+            padding: clamp(20px, 4vw, 40px);
             border-radius: 20px;
             text-align: center;
             animation: popIn 0.5s ease-out;
+            max-width: 90vw;
         }
 
         @keyframes popIn {
@@ -267,9 +542,23 @@
         }
 
         .level-complete h2 {
-            font-size: 36px;
+            font-size: clamp(28px, 5vw, 36px);
             color: #667eea;
             margin-bottom: 20px;
+        }
+
+        /* 暂停遮罩样式 */
+        .pause-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            animation: pulsePause 2s ease-in-out infinite;
+        }
+
+        @keyframes pulsePause {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
         }
 
         .level-complete p {
@@ -285,29 +574,53 @@
             <h1>🌟 星座连连看</h1>
         </div>
         
+        <div class="level-progress">
+            <div class="level-progress-label">
+                <span>🌟 关卡进度</span>
+                <span><span id="currentLevel">1</span> / 18</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 5.56%"></div>
+            </div>
+        </div>
+
         <div class="score-board">
             <div class="score-item">
-                <div class="label">当前关卡</div>
-                <div class="value" id="level">1</div>
-            </div>
-            <div class="score-item">
-                <div class="label">得分</div>
+                <div class="label">📊 得分</div>
                 <div class="value" id="score">0</div>
             </div>
             <div class="score-item">
-                <div class="label">剩余方块</div>
+                <div class="label">⏱️ 时间</div>
+                <div class="value" id="timer">00:00</div>
+            </div>
+            <div class="score-item">
+                <div class="label">🧩 剩余</div>
                 <div class="value" id="remaining">0</div>
+            </div>
+            <div class="score-item">
+                <div class="label">🏆 最高分</div>
+                <div class="value" id="highScore">0</div>
             </div>
         </div>
 
         <div class="game-board" id="board"></div>
 
         <div class="buttons">
-            <button class="btn" onclick="game.restart()">🔄 重新开始</button>
+            <button class="btn btn-primary" onclick="game.shuffle()">🔀 洗牌</button>
             <button class="btn" onclick="game.hint()">💡 提示</button>
+            <button class="btn" onclick="game.togglePause()">⏸️ 暂停</button>
+            <button class="btn" onclick="game.restart()">🔄 重新开始</button>
         </div>
 
         <div class="message" id="message"></div>
+    </div>
+
+    <!-- 开始游戏弹窗 -->
+    <div class="level-complete show" id="startGame">
+        <div class="level-complete-content">
+            <h2>🌟 星座连连看</h2>
+            <button class="btn" onclick="game.startGame()">开始游戏</button>
+        </div>
     </div>
 
     <div class="level-complete" id="levelComplete">
@@ -318,6 +631,6 @@
         </div>
     </div>
 
-    <script src="game.js?v=14"></script>
+    <script src="game.js?v=16"></script>
 </body>
 </html>
